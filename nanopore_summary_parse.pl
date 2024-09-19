@@ -66,7 +66,12 @@ if ($filelist and -e $filelist) {
 	close ($fh);
 }
 
+my $ct=0;
 foreach my $f0 (@files) {
+	# $ct++;
+	# exit if $ct==3;
+	# next if $ct<28;
+	# last if $ct>32;
 	printf "> %s . . .\n", $f0;
 	my $f;
 	if (-d $f0) { # if input dir, need to look for seq-sum.txt under this dir
@@ -88,8 +93,8 @@ foreach my $f0 (@files) {
 	}
 
 	my $stat={
-		'pass'=>{total_read=>0, total_len=>0},
-		'fail'=>{total_read=>0, total_len=>0}
+		'pass'=>{total_read=>0, total_len=>0, read_min=>0, read_max=>0, N50=>0 },
+		'fail'=>{total_read=>0, total_len=>0, read_min=>0, read_max=>0, N50=>0}
 	};
 	my $reads={};
 
@@ -116,6 +121,13 @@ foreach my $f0 (@files) {
 		}
 	}
 	close ($fh);
+	# deal with empty sum files
+	if ($stat->{pass}{total_len}==0) {
+		print "    empty \"sequencing_summary\" file, skip\n";
+		printf $fh2 "%s\t-2\n", $f0;
+		next;
+	}
+	# print Dumper $stat;<>;
 	# calc N50
 	# https://timkahlke.github.io/LongRead_tutorials/APP_MET.html#:~:text=The%20N50%20is%20related%20to,in%20the%20set%20of%20sequences.
 	foreach my $pf ("pass", "fail") {
@@ -139,13 +151,14 @@ foreach my $f0 (@files) {
 			}
 		}
 	}
-	# die Dumper $stat;
+	# print Dumper $stat;<>;
 
 	printf $fh2 "%s\n",
 		join "\t", ( $f,
 			$stat->{pass}{total_read}, $stat->{pass}{total_len}, $stat->{pass}{read_max}, $stat->{pass}{read_min}, $stat->{pass}{N50},
 			$stat->{fail}{total_read}, $stat->{fail}{total_len}, $stat->{fail}{read_max}, $stat->{fail}{read_min}, $stat->{fail}{N50}
 		);
+	# printf "  done.\n";
 }
 
 print "\n\nall done, output stat data written to ", $ofile;
